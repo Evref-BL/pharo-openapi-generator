@@ -63,6 +63,9 @@ OpenAPIGenerator >> generate [
 	"Generate all classes from the OpenAPI specification"
 	| models client |
 	
+	"Resolve references in the specification"
+	self resolveSpecification.
+	
 	"Generate model classes"
 	models := self modelGenerator generate.
 	
@@ -73,6 +76,12 @@ OpenAPIGenerator >> generate [
 		at: 'models' put: models;
 		at: 'client' put: client;
 		yourself
+]
+
+{ #category : 'resolving' }
+OpenAPIGenerator >> resolveSpecification [
+	"Resolve all references in the specification"
+	specification resolveSpecification
 ]
 
 { #category : 'accessing' }

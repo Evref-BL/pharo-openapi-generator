@@ -38,18 +38,12 @@ OpenAPIModelGenerator >> generateJSONMappingMethodsFor: cls withSchema: schemaDe
 	"Generate methods for JSON serialization/deserialization"
 	| properties fromJSONMethod toJSONMethod allProperties |
 	
-	"Handle allOf schemas"
+	"Handle allOf schemas - these should already be resolved"
 	allProperties := Dictionary new.
 	(schemaDefinition includesKey: 'allOf') ifTrue: [
 		(schemaDefinition at: 'allOf') do: [ :subSchema |
 			| subProperties |
-			(subSchema includesKey: '$ref') 
-				ifTrue: [ 
-					| resolvedSchema |
-					resolvedSchema := self resolveReference: (subSchema at: '$ref').
-					subProperties := resolvedSchema at: 'properties' ifAbsent: [ Dictionary new ].
-				]
-				ifFalse: [ subProperties := subSchema at: 'properties' ifAbsent: [ Dictionary new ] ].
+			subProperties := subSchema at: 'properties' ifAbsent: [ Dictionary new ].
 			allProperties addAll: subProperties.
 		].
 	] ifFalse: [
@@ -150,18 +144,12 @@ OpenAPIModelGenerator >> generateModelClass: className withInstanceVariables: in
 { #category : 'private - generation' }
 OpenAPIModelGenerator >> generateModelForSchema: schemaDefinition named: schemaName [
 	"Generate a model class for the given schema"
-	| className instanceVariables actualSchema |
-	
-	"Handle schema that is a reference"
-	actualSchema := schemaDefinition.
-	(schemaDefinition includesKey: '$ref') ifTrue: [
-		actualSchema := self resolveReference: (schemaDefinition at: '$ref').
-	].
+	| className instanceVariables |
 	
 	className := self modelClassNameFor: schemaName.
-	instanceVariables := self instanceVariablesForSchema: actualSchema.
+	instanceVariables := self instanceVariablesForSchema: schemaDefinition.
 	
-	^ self generateModelClass: className withInstanceVariables: instanceVariables schema: actualSchema
+	^ self generateModelClass: className withInstanceVariables: instanceVariables schema: schemaDefinition
 ]
 
 { #category : 'private - utilities' }
@@ -169,15 +157,13 @@ OpenAPIModelGenerator >> instanceVariablesForSchema: schemaDefinition [
 	"Extract instance variables from schema properties"
 	| properties |
 	
-	"Handle allOf, oneOf, anyOf schemas"
+	"Handle allOf schemas - these should already be resolved"
 	(schemaDefinition includesKey: 'allOf') ifTrue: [
 		| allVars |
 		allVars := OrderedCollection new.
 		(schemaDefinition at: 'allOf') do: [ :subSchema |
 			| subVars |
-			(subSchema includesKey: '$ref') 
-				ifTrue: [ subVars := self instanceVariablesForSchema: (self resolveReference: (subSchema at: '$ref')) ]
-				ifFalse: [ subVars := self instanceVariablesForSchema: subSchema ].
+			subVars := self instanceVariablesForSchema: subSchema.
 			allVars addAll: subVars.
 		].
 		^ allVars asSet asOrderedCollection
@@ -224,25 +210,7 @@ OpenAPIModelGenerator >> specification: anOpenAPISpecification [
 	specification := anOpenAPISpecification
 ]
 
-{ #category : 'private - utilities' }
-OpenAPIModelGenerator >> resolveReference: refString [
-	"Resolve a reference to its actual schema"
-	| parts path currentObject |
-	
-	parts := refString splitOn: '/'.
-	
-	"Skip the first part if it's '#'"
-	path := parts copyWithoutFirst.
-	path first = '' ifTrue: [ path := path copyWithoutFirst ].
-	
-	"Navigate through the JSON structure to find the referenced object"
-	currentObject := self specification jsonSpec.
-	path do: [ :part |
-		currentObject := currentObject at: part ifAbsent: [ Dictionary new ].
-	].
-	
-	^ currentObject
-]
+
 
 { #category : 'private - utilities' }
 OpenAPIModelGenerator >> typeFromRef: refString [
