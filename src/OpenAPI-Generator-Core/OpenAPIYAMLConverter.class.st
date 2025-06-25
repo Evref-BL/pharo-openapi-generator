@@ -1,7 +1,8 @@
 Class {
 	#name : #OpenAPIYAMLConverter,
 	#superclass : #Object,
-	#category : #'OpenAPI-Generator-Core-Utilities'
+	#category : #'OpenAPI-Generator-Core-Utilities',
+	#package : 'OpenAPI-Generator-Core'
 }
 
 { #category : #conversion }

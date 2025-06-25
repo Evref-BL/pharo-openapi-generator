@@ -9,7 +9,8 @@ Class {
 		'clientPackageName',
 		'prefix'
 	],
-	#category : #'OpenAPI-Generator-Core-Main'
+	#category : #'OpenAPI-Generator-Core-Main',
+	#package : 'OpenAPI-Generator-Core'
 }
 
 { #category : #'instance creation' }

@@ -7,7 +7,8 @@ Class {
 		'prefix',
 		'baseUrl'
 	],
-	#category : #'OpenAPI-Generator-Core-Generators'
+	#category : #'OpenAPI-Generator-Core-Generators',
+	#package : 'OpenAPI-Generator-Core'
 }
 
 { #category : #'instance creation' }

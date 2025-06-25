@@ -1,4 +1,4 @@
-Extension { #name : #String }
+Extension { #name : #String, #package : 'OpenAPI-Generator-Core' }
 
 { #category : #'*OpenAPI-Generator-Core' }
 String >> asValidClassName [

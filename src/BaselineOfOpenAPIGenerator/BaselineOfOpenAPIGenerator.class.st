@@ -1,7 +1,8 @@
 Class {
 	#name : #BaselineOfOpenAPIGenerator,
 	#superclass : #BaselineOf,
-	#category : #BaselineOfOpenAPIGenerator
+	#category : #BaselineOfOpenAPIGenerator,
+	#package : 'BaselineOfOpenAPIGenerator'
 }
 
 { #category : #baselines }

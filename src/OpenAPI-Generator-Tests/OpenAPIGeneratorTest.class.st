@@ -1,7 +1,8 @@
 Class {
 	#name : #OpenAPIGeneratorTest,
 	#superclass : #TestCase,
-	#category : #'OpenAPI-Generator-Tests'
+	#category : #'OpenAPI-Generator-Tests',
+	#package : 'OpenAPI-Generator-Tests'
 }
 
 { #category : #tests }

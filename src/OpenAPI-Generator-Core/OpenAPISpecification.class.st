@@ -7,7 +7,8 @@ Class {
 		'components',
 		'info'
 	],
-	#category : #'OpenAPI-Generator-Core-Model'
+	#category : #'OpenAPI-Generator-Core-Model',
+	#package : 'OpenAPI-Generator-Core'
 }
 
 { #category : #'instance creation' }
