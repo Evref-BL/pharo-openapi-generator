@@ -1,17 +1,17 @@
 Class {
-	#name : #OpenAPISpecification,
-	#superclass : #Object,
+	#name : 'OpenAPISpecification',
+	#superclass : 'Object',
 	#instVars : [
 		'jsonSpec',
 		'paths',
 		'components',
 		'info'
 	],
-	#category : #'OpenAPI-Generator-Core-Model',
+	#category : 'OpenAPI-Generator-Core',
 	#package : 'OpenAPI-Generator-Core'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPISpecification class >> fromFile: aFileReference [
 	"Create a new specification from a file (JSON or YAML)"
 	| extension |
@@ -26,7 +26,7 @@ OpenAPISpecification class >> fromFile: aFileReference [
 	self error: 'Unsupported file format: ', extension
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPISpecification class >> fromJSONFile: aFileReference [
 	"Create a new specification from a JSON file"
 	| json |
@@ -34,7 +34,7 @@ OpenAPISpecification class >> fromJSONFile: aFileReference [
 	^ self new initializeWithJSON: json
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPISpecification class >> fromJSONString: aString [
 	"Create a new specification from a JSON string"
 	| json |
@@ -42,7 +42,7 @@ OpenAPISpecification class >> fromJSONString: aString [
 	^ self new initializeWithJSON: json
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPISpecification class >> fromYAMLFile: aFileReference [
 	"Create a new specification from a YAML file"
 	| yaml json |
@@ -51,17 +51,17 @@ OpenAPISpecification class >> fromYAMLFile: aFileReference [
 	^ self new initializeWithJSON: json
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPISpecification >> components [
 	^ components
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPISpecification >> info [
 	^ info
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 OpenAPISpecification >> initializeWithJSON: aJSONObject [
 	jsonSpec := aJSONObject.
 	
@@ -71,17 +71,22 @@ OpenAPISpecification >> initializeWithJSON: aJSONObject [
 	components := jsonSpec at: 'components' ifAbsent: [ Dictionary new ].
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
+OpenAPISpecification >> jsonSpec [
+	^ jsonSpec
+]
+
+{ #category : 'accessing' }
 OpenAPISpecification >> paths [
 	^ paths
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPISpecification >> title [
 	^ info at: 'title' ifAbsent: [ 'Untitled API' ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPISpecification >> version [
 	^ info at: 'version' ifAbsent: [ '1.0.0' ]
 ]

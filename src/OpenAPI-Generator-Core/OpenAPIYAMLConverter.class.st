@@ -1,11 +1,11 @@
 Class {
-	#name : #OpenAPIYAMLConverter,
-	#superclass : #Object,
-	#category : #'OpenAPI-Generator-Core-Utilities',
+	#name : 'OpenAPIYAMLConverter',
+	#superclass : 'Object',
+	#category : 'OpenAPI-Generator-Core',
 	#package : 'OpenAPI-Generator-Core'
 }
 
-{ #category : #conversion }
+{ #category : 'conversion' }
 OpenAPIYAMLConverter class >> convertToJSON: yamlString [
 	"Convert a YAML string to a JSON object"
 	| result |
@@ -21,7 +21,7 @@ OpenAPIYAMLConverter class >> convertToJSON: yamlString [
 	^ self parseYAML: yamlString
 ]
 
-{ #category : #'private - parsing' }
+{ #category : 'private - parsing' }
 OpenAPIYAMLConverter class >> parseYAML: yamlString [
 	"A simple YAML parser for OpenAPI specifications"
 	| lines currentIndent currentKey currentObject stack result |

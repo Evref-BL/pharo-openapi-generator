@@ -1,24 +1,24 @@
 Class {
-	#name : #OpenAPIClientGenerator,
-	#superclass : #Object,
+	#name : 'OpenAPIClientGenerator',
+	#superclass : 'Object',
 	#instVars : [
 		'specification',
 		'packageName',
 		'prefix',
 		'baseUrl'
 	],
-	#category : #'OpenAPI-Generator-Core-Generators',
+	#category : 'OpenAPI-Generator-Core',
 	#package : 'OpenAPI-Generator-Core'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPIClientGenerator class >> forSpecification: anOpenAPISpecification [
 	^ self new
 		specification: anOpenAPISpecification;
 		yourself
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> baseUrl [
 	^ baseUrl ifNil: [ 
 		| servers |
@@ -28,12 +28,12 @@ OpenAPIClientGenerator >> baseUrl [
 	]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> baseUrl: aString [
 	baseUrl := aString
 ]
 
-{ #category : #generation }
+{ #category : 'generation' }
 OpenAPIClientGenerator >> generate [
 	"Generate API client classes from the OpenAPI specification"
 	| apiClass |
@@ -44,55 +44,60 @@ OpenAPIClientGenerator >> generate [
 	^ apiClass
 ]
 
-{ #category : #'private - generation' }
+{ #category : 'private - generation' }
 OpenAPIClientGenerator >> generateAPIClientClass [
 	"Generate the main API client class"
+
 	| className |
-	
-	className := (self prefix, (specification title asValidClassName), 'Client') asSymbol.
-	
-	^ Object subclass: className
-		instanceVariableNames: 'baseUrl httpClient'
-		classVariableNames: ''
-		package: self packageName.
+	className := (self prefix , specification title asValidClassName
+	              , 'Client') asSymbol.
+
+	^ Object classInstaller make: [ :builder |
+		  builder
+			  superclass: Object;
+			  name: className;
+			  slotsFromString: 'baseUrl httpClient';
+			  sharedVariablesFromString: '';
+			  package: self packageName;
+			  environment: Object environment ]
 ]
 
-{ #category : #'private - generation' }
+{ #category : 'private - generation' }
 OpenAPIClientGenerator >> generateEndpointMethodsInClass: apiClass [
 	"Generate methods for each API endpoint"
+
 	| paths |
-	
 	"Generate initialization method"
-	apiClass compile: 'initialize
+	apiClass
+		compile: ('initialize
 	super initialize.
 	baseUrl := ''{1}''.
-	httpClient := ZnClient new.' format: {self baseUrl}.
-	
+	httpClient := ZnClient new.'
+		format: { self baseUrl }).
+
 	"Generate baseUrl accessor"
 	apiClass compile: 'baseUrl
 	^ baseUrl'.
-	
+
 	apiClass compile: 'baseUrl: aString
 	baseUrl := aString'.
-	
+
 	paths := specification paths.
 	paths keysAndValuesDo: [ :path :pathItem |
 		pathItem keysAndValuesDo: [ :httpMethod :operation |
-			(#('get' 'post' 'put' 'delete' 'patch' 'head' 'options') includes: httpMethod) ifTrue: [
-				self 
-					generateMethodForPath: path 
-					httpMethod: httpMethod 
-					operation: operation 
-					inClass: apiClass
-			]
-		]
-	]
+			(#( 'get' 'post' 'put' 'delete' 'patch' 'head' 'options' )
+				 includes: httpMethod) ifTrue: [
+				self
+					generateMethodForPath: path
+					httpMethod: httpMethod
+					operation: operation
+					inClass: apiClass ] ] ]
 ]
 
-{ #category : #'private - generation' }
+{ #category : 'private - generation' }
 OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod operation: operation inClass: apiClass [
 	"Generate a method for a specific API endpoint"
-	| methodName methodSource parameters returnType |
+	| methodName methodSource parameters returnType 	 queryParams |
 	
 	methodName := self methodNameForOperation: operation path: path httpMethod: httpMethod.
 	parameters := operation at: 'parameters' ifAbsent: [ #() ].
@@ -129,7 +134,7 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 		].
 		
 		"Query parameters"
-		| queryParams |
+	
 		queryParams := parameters select: [ :param | (param at: 'in' ifAbsent: ['']) = 'query' ].
 		
 		queryParams ifNotEmpty: [
@@ -179,46 +184,48 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 	apiClass compile: methodSource.
 ]
 
-{ #category : #'private - utilities' }
+{ #category : 'private - utilities' }
 OpenAPIClientGenerator >> methodNameForOperation: operation path: path httpMethod: httpMethod [
 	"Generate a method name for the operation"
+
 	| name |
-	
 	"Use operationId if available"
 	(operation includesKey: 'operationId') ifTrue: [
-		^ (operation at: 'operationId') asValidMethodName
-	].
-	
+		^ (operation at: 'operationId') asValidMethodName ].
+
 	"Otherwise generate from path and HTTP method"
-	name := httpMethod, (path 
-		copyReplaceAll: '/' with: '_'
-		copyReplaceAll: '{' with: ''
-		copyReplaceAll: '}' with: '').
-		
+	name := httpMethod , (path
+		         copyReplaceAll: '/'
+		         with: '_';
+		         copyReplaceAll: '{'
+		         with: '';
+		         copyReplaceAll: '}'
+		         with: '').
+
 	^ name asValidMethodName
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> packageName [
 	^ packageName ifNil: [ packageName := 'OpenAPI-Generated-Client' ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> packageName: aString [
 	packageName := aString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> prefix [
 	^ prefix ifNil: [ prefix := '' ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> prefix: aString [
 	prefix := aString
 ]
 
-{ #category : #'private - utilities' }
+{ #category : 'private - utilities' }
 OpenAPIClientGenerator >> returnTypeForOperation: operation [
 	"Determine the return type for an operation"
 	| responses successResponse schema ref |
@@ -242,17 +249,17 @@ OpenAPIClientGenerator >> returnTypeForOperation: operation [
 	^ nil
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> specification [
 	^ specification
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIClientGenerator >> specification: anOpenAPISpecification [
 	specification := anOpenAPISpecification
 ]
 
-{ #category : #'private - utilities' }
+{ #category : 'private - utilities' }
 OpenAPIClientGenerator >> typeFromRef: refString [
 	"Extract type name from a $ref string"
 	| parts |

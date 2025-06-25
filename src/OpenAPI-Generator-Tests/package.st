@@ -1,1 +1,1 @@
-Package { #name : #'OpenAPI-Generator-Tests' }
+Package { #name : 'OpenAPI-Generator-Tests' }

@@ -1,11 +1,11 @@
 Class {
-	#name : #OpenAPIGeneratorTest,
-	#superclass : #TestCase,
-	#category : #'OpenAPI-Generator-Tests',
+	#name : 'OpenAPIGeneratorTest',
+	#superclass : 'TestCase',
+	#category : 'OpenAPI-Generator-Tests',
 	#package : 'OpenAPI-Generator-Tests'
 }
 
-{ #category : #tests }
+{ #category : 'tests' }
 OpenAPIGeneratorTest >> testGenerateFromJSONString [
 	| json generator result |
 	
@@ -68,10 +68,10 @@ OpenAPIGeneratorTest >> testGenerateFromJSONString [
 	self assert: (result at: 'client') isNotNil.
 ]
 
-{ #category : #tests }
+{ #category : 'tests' }
 OpenAPIGeneratorTest >> testStringExtensions [
 	self assert: 'my-class-name' asValidClassName equals: 'MyClassName'.
 	self assert: 'my variable' asValidVariableName equals: 'myVariable'.
-	self assert: 'My-Method Name' asValidMethodName equals: 'myMethodName'.
-	self assert: 'my_instance_var' asValidInstanceVariableName equals: 'myInstanceVar'.
+	self assert: 'My-Method Name'  asValidMethodName equals: 'myMethodName'.
+	self assert: 'my_instance_var' asValidInstanceVariableName equals: 'my_instance_var'.
 ]

@@ -1,23 +1,23 @@
 Class {
-	#name : #OpenAPIModelGenerator,
-	#superclass : #Object,
+	#name : 'OpenAPIModelGenerator',
+	#superclass : 'Object',
 	#instVars : [
 		'specification',
 		'packageName',
 		'prefix'
 	],
-	#category : #'OpenAPI-Generator-Core-Generators',
+	#category : 'OpenAPI-Generator-Core',
 	#package : 'OpenAPI-Generator-Core'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPIModelGenerator class >> forSpecification: anOpenAPISpecification [
 	^ self new
 		specification: anOpenAPISpecification;
 		yourself
 ]
 
-{ #category : #generation }
+{ #category : 'generation' }
 OpenAPIModelGenerator >> generate [
 	"Generate model classes from the OpenAPI specification"
 	| schemas |
@@ -28,43 +28,7 @@ OpenAPIModelGenerator >> generate [
 	].
 ]
 
-{ #category : #'private - generation' }
-OpenAPIModelGenerator >> generateModelForSchema: schemaDefinition named: schemaName [
-	"Generate a model class for the given schema"
-	| className instanceVariables |
-	
-	className := self modelClassNameFor: schemaName.
-	instanceVariables := self instanceVariablesForSchema: schemaDefinition.
-	
-	^ self generateModelClass: className withInstanceVariables: instanceVariables schema: schemaDefinition
-]
-
-{ #category : #'private - generation' }
-OpenAPIModelGenerator >> generateModelClass: className withInstanceVariables: instanceVariables schema: schemaDefinition [
-	"Generate a Pharo class for the model"
-	| cls |
-	
-	cls := Object subclass: className asSymbol
-		instanceVariableNames: (instanceVariables joinUsing: ' ')
-		classVariableNames: ''
-		package: self packageName.
-		
-	"Generate accessors"
-	instanceVariables do: [ :ivar |
-		cls compile: ('{1}
-	^ {1}' format: {ivar}).
-		
-		cls compile: ('{1}: anObject
-	{1} := anObject' format: {ivar}).
-	].
-	
-	"Generate JSON mapping methods"
-	self generateJSONMappingMethodsFor: cls withSchema: schemaDefinition.
-	
-	^ cls
-]
-
-{ #category : #'private - generation' }
+{ #category : 'private - generation' }
 OpenAPIModelGenerator >> generateJSONMappingMethodsFor: cls withSchema: schemaDefinition [
 	"Generate methods for JSON serialization/deserialization"
 	| properties fromJSONMethod toJSONMethod |
@@ -134,7 +98,46 @@ OpenAPIModelGenerator >> generateJSONMappingMethodsFor: cls withSchema: schemaDe
 	cls compile: toJSONMethod.
 ]
 
-{ #category : #'private - utilities' }
+{ #category : 'private - generation' }
+OpenAPIModelGenerator >> generateModelClass: className withInstanceVariables: instanceVariables schema: schemaDefinition [
+	"Generate a Pharo class for the model"
+
+	| cls |
+	cls := Object classInstaller make: [ :builder |
+		       builder
+			       superclass: Object;
+			       name: className asSymbol;
+			       slotsFromString: (instanceVariables joinUsing: ' ');
+			       sharedVariablesFromString: '';
+			       package: self packageName;
+			       environment: Object environment ].
+
+	"Generate accessors"
+	instanceVariables do: [ :ivar |
+		cls compile: ('{1}
+	^ {1}' format: { ivar }).
+
+		cls compile: ('{1}: anObject
+	{1} := anObject' format: { ivar }) ].
+
+	"Generate JSON mapping methods"
+	self generateJSONMappingMethodsFor: cls withSchema: schemaDefinition.
+
+	^ cls
+]
+
+{ #category : 'private - generation' }
+OpenAPIModelGenerator >> generateModelForSchema: schemaDefinition named: schemaName [
+	"Generate a model class for the given schema"
+	| className instanceVariables |
+	
+	className := self modelClassNameFor: schemaName.
+	instanceVariables := self instanceVariablesForSchema: schemaDefinition.
+	
+	^ self generateModelClass: className withInstanceVariables: instanceVariables schema: schemaDefinition
+]
+
+{ #category : 'private - utilities' }
 OpenAPIModelGenerator >> instanceVariablesForSchema: schemaDefinition [
 	"Extract instance variables from schema properties"
 	| properties |
@@ -143,43 +146,43 @@ OpenAPIModelGenerator >> instanceVariablesForSchema: schemaDefinition [
 	^ properties keys collect: [ :propName | propName asValidInstanceVariableName ]
 ]
 
-{ #category : #'private - utilities' }
+{ #category : 'private - utilities' }
 OpenAPIModelGenerator >> modelClassNameFor: schemaName [
 	"Generate a class name for the schema"
 	^ (self prefix, schemaName) asValidClassName
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIModelGenerator >> packageName [
 	^ packageName ifNil: [ packageName := 'OpenAPI-Generated-Models' ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIModelGenerator >> packageName: aString [
 	packageName := aString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIModelGenerator >> prefix [
 	^ prefix ifNil: [ prefix := '' ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIModelGenerator >> prefix: aString [
 	prefix := aString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIModelGenerator >> specification [
 	^ specification
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIModelGenerator >> specification: anOpenAPISpecification [
 	specification := anOpenAPISpecification
 ]
 
-{ #category : #'private - utilities' }
+{ #category : 'private - utilities' }
 OpenAPIModelGenerator >> typeFromRef: refString [
 	"Extract type name from a $ref string"
 	| parts |

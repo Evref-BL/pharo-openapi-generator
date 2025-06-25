@@ -1,6 +1,6 @@
 Class {
-	#name : #OpenAPIGenerator,
-	#superclass : #Object,
+	#name : 'OpenAPIGenerator',
+	#superclass : 'Object',
 	#instVars : [
 		'specification',
 		'modelGenerator',
@@ -9,11 +9,11 @@ Class {
 		'clientPackageName',
 		'prefix'
 	],
-	#category : #'OpenAPI-Generator-Core-Main',
+	#category : 'OpenAPI-Generator-Core',
 	#package : 'OpenAPI-Generator-Core'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPIGenerator class >> fromFile: aFileReference [
 	"Create a generator from an OpenAPI file"
 	| spec |
@@ -23,7 +23,7 @@ OpenAPIGenerator class >> fromFile: aFileReference [
 		yourself
 ]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 OpenAPIGenerator class >> fromJSONString: aString [
 	"Create a generator from a JSON string"
 	| spec |
@@ -33,7 +33,7 @@ OpenAPIGenerator class >> fromJSONString: aString [
 		yourself
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> clientGenerator [
 	^ clientGenerator ifNil: [
 		clientGenerator := OpenAPIClientGenerator forSpecification: self specification.
@@ -44,7 +44,7 @@ OpenAPIGenerator >> clientGenerator [
 	]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> clientPackageName [
 	^ clientPackageName ifNil: [ 
 		| title |
@@ -53,12 +53,12 @@ OpenAPIGenerator >> clientPackageName [
 	]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> clientPackageName: aString [
 	clientPackageName := aString
 ]
 
-{ #category : #generation }
+{ #category : 'generation' }
 OpenAPIGenerator >> generate [
 	"Generate all classes from the OpenAPI specification"
 	| models client |
@@ -75,7 +75,7 @@ OpenAPIGenerator >> generate [
 		yourself
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> modelGenerator [
 	^ modelGenerator ifNil: [
 		modelGenerator := OpenAPIModelGenerator forSpecification: self specification.
@@ -86,7 +86,7 @@ OpenAPIGenerator >> modelGenerator [
 	]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> modelPackageName [
 	^ modelPackageName ifNil: [ 
 		| title |
@@ -95,27 +95,27 @@ OpenAPIGenerator >> modelPackageName [
 	]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> modelPackageName: aString [
 	modelPackageName := aString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> prefix [
 	^ prefix ifNil: [ prefix := '' ]
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> prefix: aString [
 	prefix := aString
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> specification [
 	^ specification
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 OpenAPIGenerator >> specification: anOpenAPISpecification [
 	specification := anOpenAPISpecification
 ]
