@@ -17,7 +17,7 @@ Pour installer ce projet dans Pharo 12, exécutez le code suivant dans un Playgr
 ```smalltalk
 Metacello new
     baseline: 'OpenAPIGenerator';
-    repository: 'github://votre-utilisateur/pharo-openapi-generator:main';
+    repository: 'github://Evref-BL/pharo-openapi-generator:main';
     load.
 ```
 
