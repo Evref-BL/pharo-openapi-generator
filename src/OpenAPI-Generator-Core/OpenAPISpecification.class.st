@@ -108,38 +108,60 @@ OpenAPISpecification >> resolveReferencesIn: dictionary at: key [
 	container := dictionary at: key ifAbsent: [ Dictionary new ].
 	
 	container keysAndValuesDo: [ :itemKey :itemValue |
-		self resolveReferencesInObject: itemValue.
+		self resolveReferencesInObject: itemValue visitedRefs: Set new.
 	].
 ]
 
 { #category : 'private - resolving' }
 OpenAPISpecification >> resolveReferencesInObject: anObject [
 	"Recursively resolve references in an object"
+	^ self resolveReferencesInObject: anObject visitedRefs: Set new
+]
+
+{ #category : 'private - resolving' }
+OpenAPISpecification >> resolveReferencesInObject: anObject visitedRefs: visitedRefs [
+	"Recursively resolve references in an object, keeping track of visited references to avoid cycles"
 	
 	anObject isDictionary ifTrue: [
-
 		anObject at: '$ref' ifPresent: [ :ref |
-			|resolvedObject|
-			1 halt. "BUG: some resolved objet can contain nested ref to them self, making while true endless loop"
+			| resolvedObject |
+			
+			"Check if we've already visited this reference to avoid cycles"
+			(visitedRefs includes: ref) ifTrue: [
+				"Skip this reference to avoid infinite recursion"
+				^ anObject
+			].
+			
+			"Add this reference to the visited set"
+			visitedRefs add: ref.
+			
+			"Resolve the reference"
 			resolvedObject := self resolveReference: ref.
+			
+			"Copy properties from resolved object"
 			resolvedObject keysAndValuesDo: [ :key :value |
 				anObject at: key put: value.
 			].
+			
+			"Remove the $ref property"
 			anObject removeKey: '$ref'.
 		].
-	
+		
 		"Continue resolving nested objects"
 		anObject keysAndValuesDo: [ :key :value |
-			self resolveReferencesInObject: value.
+			self resolveReferencesInObject: value visitedRefs: visitedRefs copy.
 		].
-	
 	].
 	
 	anObject isArray ifTrue: [
-			anObject do: [ :item |
-				self resolveReferencesInObject: item.
-			].
+		anObject doWithIndex: [ :item :index |
+			| resolvedItem |
+			resolvedItem := self resolveReferencesInObject: item visitedRefs: visitedRefs copy.
+			anObject at: index put: resolvedItem.
 		].
+	].
+	
+	^ anObject
 ]
 
 { #category : 'resolving' }
@@ -151,7 +173,7 @@ OpenAPISpecification >> resolveSpecification [
 	
 	"Resolve paths"
 	paths keysAndValuesDo: [ :path :pathItem |
-		self resolveReferencesInObject: pathItem.
+		self resolveReferencesInObject: pathItem visitedRefs: Set new.
 	].
 ]
 
