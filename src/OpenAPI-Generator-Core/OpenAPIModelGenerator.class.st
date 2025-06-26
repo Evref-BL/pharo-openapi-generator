@@ -210,8 +210,6 @@ OpenAPIModelGenerator >> specification: anOpenAPISpecification [
 	specification := anOpenAPISpecification
 ]
 
-
-
 { #category : 'private - utilities' }
 OpenAPIModelGenerator >> typeFromRef: refString [
 	"Extract type name from a $ref string"

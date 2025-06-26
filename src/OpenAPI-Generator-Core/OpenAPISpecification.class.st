@@ -71,58 +71,14 @@ OpenAPISpecification >> initializeWithJSON: aJSONObject [
 	components := jsonSpec at: 'components' ifAbsent: [ Dictionary new ].
 ]
 
-{ #category : 'resolving' }
-OpenAPISpecification >> resolveSpecification [
-	"Resolve all $ref references in the specification"
-	
-	"Resolve components schemas"
-	self resolveReferencesIn: components at: 'schemas'.
-	
-	"Resolve paths"
-	paths keysAndValuesDo: [ :path :pathItem |
-		self resolveReferencesInObject: pathItem.
-	].
+{ #category : 'accessing' }
+OpenAPISpecification >> jsonSpec [
+	^ jsonSpec
 ]
 
-{ #category : 'private - resolving' }
-OpenAPISpecification >> resolveReferencesIn: dictionary at: key [
-	"Resolve references in a dictionary at a specific key"
-	| container |
-	container := dictionary at: key ifAbsent: [ Dictionary new ].
-	
-	container keysAndValuesDo: [ :itemKey :itemValue |
-		self resolveReferencesInObject: itemValue.
-	].
-]
-
-{ #category : 'private - resolving' }
-OpenAPISpecification >> resolveReferencesInObject: anObject [
-	"Recursively resolve references in an object"
-	
-	anObject isDictionary ifTrue: [
-		(anObject includesKey: '$ref') ifTrue: [
-			| refValue resolvedObject |
-			refValue := anObject at: '$ref'.
-			resolvedObject := self resolveReference: refValue.
-			
-			"Replace all keys in the original object with resolved object"
-			anObject removeKey: '$ref'.
-			resolvedObject keysAndValuesDo: [ :key :value |
-				anObject at: key put: value.
-			].
-		].
-		
-		"Continue resolving nested objects"
-		anObject keysAndValuesDo: [ :key :value |
-			self resolveReferencesInObject: value.
-		].
-	] ifFalse: [
-		anObject isArray ifTrue: [
-			anObject do: [ :item |
-				self resolveReferencesInObject: item.
-			].
-		].
-	].
+{ #category : 'accessing' }
+OpenAPISpecification >> paths [
+	^ paths
 ]
 
 { #category : 'private - resolving' }
@@ -145,19 +101,58 @@ OpenAPISpecification >> resolveReference: refString [
 	^ currentObject copy
 ]
 
-{ #category : 'accessing' }
-OpenAPISpecification >> jsonSpec [
-	^ jsonSpec
+{ #category : 'private - resolving' }
+OpenAPISpecification >> resolveReferencesIn: dictionary at: key [
+	"Resolve references in a dictionary at a specific key"
+	| container |
+	container := dictionary at: key ifAbsent: [ Dictionary new ].
+	
+	container keysAndValuesDo: [ :itemKey :itemValue |
+		self resolveReferencesInObject: itemValue.
+	].
 ]
 
-{ #category : 'accessing' }
-OpenAPISpecification >> jsonSpec [
-	^ jsonSpec
+{ #category : 'private - resolving' }
+OpenAPISpecification >> resolveReferencesInObject: anObject [
+	"Recursively resolve references in an object"
+	
+	anObject isDictionary ifTrue: [
+
+		anObject at: '$ref' ifPresent: [ :ref |
+			|resolvedObject|
+			1 halt. "BUG: some resolved objet can contain nested ref to them self, making while true endless loop"
+			resolvedObject := self resolveReference: ref.
+			resolvedObject keysAndValuesDo: [ :key :value |
+				anObject at: key put: value.
+			].
+			anObject removeKey: '$ref'.
+		].
+	
+		"Continue resolving nested objects"
+		anObject keysAndValuesDo: [ :key :value |
+			self resolveReferencesInObject: value.
+		].
+	
+	].
+	
+	anObject isArray ifTrue: [
+			anObject do: [ :item |
+				self resolveReferencesInObject: item.
+			].
+		].
 ]
 
-{ #category : 'accessing' }
-OpenAPISpecification >> paths [
-	^ paths
+{ #category : 'resolving' }
+OpenAPISpecification >> resolveSpecification [
+	"Resolve all $ref references in the specification"
+	
+	"Resolve components schemas"
+	self resolveReferencesIn: components at: 'schemas'.
+	
+	"Resolve paths"
+	paths keysAndValuesDo: [ :path :pathItem |
+		self resolveReferencesInObject: pathItem.
+	].
 ]
 
 { #category : 'accessing' }

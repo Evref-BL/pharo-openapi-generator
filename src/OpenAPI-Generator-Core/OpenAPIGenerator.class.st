@@ -78,12 +78,6 @@ OpenAPIGenerator >> generate [
 		yourself
 ]
 
-{ #category : 'resolving' }
-OpenAPIGenerator >> resolveSpecification [
-	"Resolve all references in the specification"
-	specification resolveSpecification
-]
-
 { #category : 'accessing' }
 OpenAPIGenerator >> modelGenerator [
 	^ modelGenerator ifNil: [
@@ -117,6 +111,12 @@ OpenAPIGenerator >> prefix [
 { #category : 'accessing' }
 OpenAPIGenerator >> prefix: aString [
 	prefix := aString
+]
+
+{ #category : 'resolving' }
+OpenAPIGenerator >> resolveSpecification [
+	"Resolve all references in the specification"
+	specification resolveSpecification
 ]
 
 { #category : 'accessing' }
