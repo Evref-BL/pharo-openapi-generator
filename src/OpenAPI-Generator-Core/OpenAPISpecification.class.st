@@ -102,41 +102,41 @@ OpenAPISpecification >> resolveReference: refString [
 ]
 
 { #category : 'private - resolving' }
-OpenAPISpecification >> resolveReferencesIn: dictionary at: key [
-	"Resolve references in a dictionary at a specific key"
+OpenAPISpecification >> resolveReferencesIn: dictionary at: key resolvedObjects: resolvedObjects [
+	"Resolve references in a dictionary at a specific key using a cache of resolved objects"
 	| container |
 	container := dictionary at: key ifAbsent: [ Dictionary new ].
 	
 	container keysAndValuesDo: [ :itemKey :itemValue |
-		self resolveReferencesInObject: itemValue visitedRefs: Set new.
+		self resolveReferencesInObject: itemValue resolvedObjects: resolvedObjects.
 	].
 ]
 
 { #category : 'private - resolving' }
-OpenAPISpecification >> resolveReferencesInObject: anObject [
-	"Recursively resolve references in an object"
-	^ self resolveReferencesInObject: anObject visitedRefs: Set new
-]
-
-{ #category : 'private - resolving' }
-OpenAPISpecification >> resolveReferencesInObject: anObject visitedRefs: visitedRefs [
-	"Recursively resolve references in an object, keeping track of visited references to avoid cycles"
+OpenAPISpecification >> resolveReferencesInObject: anObject resolvedObjects: resolvedObjects [
+	"Recursively resolve references in an object using a cache of resolved objects"
 	
 	anObject isDictionary ifTrue: [
 		anObject at: '$ref' ifPresent: [ :ref |
 			| resolvedObject |
 			
-			"Check if we've already visited this reference to avoid cycles"
-			(visitedRefs includes: ref) ifTrue: [
-				"Skip this reference to avoid infinite recursion"
-				^ anObject
+			"Check if we've already resolved this reference"
+			resolvedObject := resolvedObjects at: ref ifAbsent: [
+				"Not yet resolved, get the raw object"
+				| rawObject |
+				rawObject := self resolveReference: ref.
+				
+				"Store an empty dictionary as placeholder to break cycles"
+				resolvedObjects at: ref put: Dictionary new.
+				
+				"Resolve any nested references"
+				self resolveReferencesInObject: rawObject resolvedObjects: resolvedObjects.
+				
+				"Update the cache with the fully resolved object"
+				resolvedObjects at: ref put: rawObject.
+				
+				rawObject
 			].
-			
-			"Add this reference to the visited set"
-			visitedRefs add: ref.
-			
-			"Resolve the reference"
-			resolvedObject := self resolveReference: ref.
 			
 			"Copy properties from resolved object"
 			resolvedObject keysAndValuesDo: [ :key :value |
@@ -149,15 +149,13 @@ OpenAPISpecification >> resolveReferencesInObject: anObject visitedRefs: visited
 		
 		"Continue resolving nested objects"
 		anObject keysAndValuesDo: [ :key :value |
-			self resolveReferencesInObject: value visitedRefs: visitedRefs copy.
+			self resolveReferencesInObject: value resolvedObjects: resolvedObjects.
 		].
 	].
 	
 	anObject isArray ifTrue: [
 		anObject doWithIndex: [ :item :index |
-			| resolvedItem |
-			resolvedItem := self resolveReferencesInObject: item visitedRefs: visitedRefs copy.
-			anObject at: index put: resolvedItem.
+			self resolveReferencesInObject: item resolvedObjects: resolvedObjects.
 		].
 	].
 	
@@ -167,13 +165,17 @@ OpenAPISpecification >> resolveReferencesInObject: anObject visitedRefs: visited
 { #category : 'resolving' }
 OpenAPISpecification >> resolveSpecification [
 	"Resolve all $ref references in the specification"
+	| resolvedObjects |
 	
-	"Resolve components schemas"
-	self resolveReferencesIn: components at: 'schemas'.
+	"Initialize cache for resolved objects"
+	resolvedObjects := Dictionary new.
 	
-	"Resolve paths"
+	"First phase: resolve all references in components schemas"
+	self resolveReferencesIn: components at: 'schemas' resolvedObjects: resolvedObjects.
+	
+	"Second phase: resolve all references in paths"
 	paths keysAndValuesDo: [ :path :pathItem |
-		self resolveReferencesInObject: pathItem visitedRefs: Set new.
+		self resolveReferencesInObject: pathItem resolvedObjects: resolvedObjects.
 	].
 ]
 
