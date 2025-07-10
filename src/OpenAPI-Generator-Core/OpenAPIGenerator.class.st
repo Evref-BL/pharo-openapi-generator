@@ -63,11 +63,12 @@ OpenAPIGenerator >> generate [
 	"Generate all classes from the OpenAPI specification"
 	| models client |
 	
+	
 	"Generate model classes"
 	models := self modelGenerator generate.
 	
 	"Generate API client"
-	client := self clientGenerator generate.
+	"client := self clientGenerator generate."
 	
 	^ Dictionary new
 		at: 'models' put: models;

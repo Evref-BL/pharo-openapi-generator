@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'specification',
 		'packageName',
-		'prefix'
+		'prefix',
+		'refactorer'
 	],
 	#category : 'OpenAPI-Generator-Core',
 	#package : 'OpenAPI-Generator-Core'
@@ -124,26 +125,26 @@ OpenAPIModelGenerator >> generateJSONMappingMethodsFor: cls withSchema: schemaDe
 { #category : 'private - generation' }
 OpenAPIModelGenerator >> generateModelClass: className withInstanceVariables: instanceVariables schema: schemaDefinition [
 	"Generate a Pharo class for the model"
-	| cls |
+
+	| cls valideInstVars|
+	valideInstVars := instanceVariables collect: [ :name | name asValidVariableName ].
+
 	
 	"Create the class"
-	cls := Object subclass: className asSymbol
-		instanceVariableNames: (instanceVariables joinUsing: ' ')
-		classVariableNames: ''
-		package: self packageName.
-		
-	"Generate accessors"
-	instanceVariables do: [ :ivar |
-		cls compile: ('{1}
-	^ {1}' format: {ivar}).
-		
-		cls compile: ('{1}: anObject
-	{1} := anObject' format: {ivar}).
-	].
+	cls := self refactorer createNewClass: className inPackage: self packageName.
+	valideInstVars do: [ :var | 
+		"create instance variables"
+		self refactorer addVariable: var inClass: cls.
+		"Generate accessors"
+		self refactorer createAccessorsInClass: cls ForVarNamed: var.
+		]. 
 	
+		
+
 	"Generate JSON mapping methods"
-	self generateJSONMappingMethodsFor: cls withSchema: schemaDefinition.
-	
+	"self generateJSONMappingMethodsFor: cls withSchema: schemaDefinition."
+	self flag: 'see how to redo this methods'. 
+
 	^ cls
 ]
 
@@ -215,13 +216,8 @@ OpenAPIModelGenerator >> prefix: aString [
 ]
 
 { #category : 'accessing' }
-OpenAPIModelGenerator >> specification [
-	^ specification
-]
-
-{ #category : 'accessing' }
-OpenAPIModelGenerator >> specification: anOpenAPISpecification [
-	specification := anOpenAPISpecification
+OpenAPIModelGenerator >> refactorer [
+	^ refactorer :=  refactorer ifNil: [ UtilsGenerator newWithPrefix: prefix forPackage: packageName ].
 ]
 
 { #category : 'private - utilities' }
@@ -242,6 +238,16 @@ OpenAPIModelGenerator >> resolveReference: refString [
 	].
 	
 	^ currentObject
+]
+
+{ #category : 'accessing' }
+OpenAPIModelGenerator >> specification [
+	^ specification
+]
+
+{ #category : 'accessing' }
+OpenAPIModelGenerator >> specification: anOpenAPISpecification [
+	specification := anOpenAPISpecification
 ]
 
 { #category : 'private - utilities' }

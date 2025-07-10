@@ -77,11 +77,6 @@ OpenAPISpecification >> jsonSpec [
 ]
 
 { #category : 'accessing' }
-OpenAPISpecification >> jsonSpec [
-	^ jsonSpec
-]
-
-{ #category : 'accessing' }
 OpenAPISpecification >> paths [
 	^ paths
 ]
