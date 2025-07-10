@@ -5,7 +5,8 @@ Class {
 		'specification',
 		'packageName',
 		'prefix',
-		'baseUrl'
+		'baseUrl',
+		'refactorer'
 	],
 	#category : 'OpenAPI-Generator-Core',
 	#package : 'OpenAPI-Generator-Core'
@@ -181,7 +182,8 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 			nextPutAll: '		ifFalse: [ self error: response statusLine reason ]'.
 	].
 	
-	apiClass compile: methodSource.
+	self refactorer addMethodWithCode: methodSource toClass: apiClass withProtocol: #api
+
 ]
 
 { #category : 'private - utilities' }
@@ -223,6 +225,14 @@ OpenAPIClientGenerator >> prefix [
 { #category : 'accessing' }
 OpenAPIClientGenerator >> prefix: aString [
 	prefix := aString
+]
+
+{ #category : 'accessing' }
+OpenAPIClientGenerator >> refactorer [
+	^ refactorer := refactorer ifNil: [
+		                UtilsGenerator
+			                newWithPrefix: prefix
+			                forPackage: packageName ]
 ]
 
 { #category : 'private - utilities' }

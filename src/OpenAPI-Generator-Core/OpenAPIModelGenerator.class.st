@@ -27,8 +27,12 @@ OpenAPIModelGenerator >> generate [
 	schemas := self specification components at: 'schemas' ifAbsent: [ Dictionary new ].
 	schemas keysAndValuesDo: [ :schemaName :schemaDefinition |
 		| cls |
-		cls := self generateModelForSchema: schemaDefinition named: schemaName.
-		generatedClasses add: cls.
+
+		schemaDefinition isTypeObject ifTrue: [
+			 		cls := self generateModelForSchema: schemaDefinition named: schemaName. 
+					generatedClasses add: cls. ].
+
+
 	].
 	
 	^ generatedClasses
@@ -139,11 +143,12 @@ OpenAPIModelGenerator >> generateModelClass: className withInstanceVariables: in
 		self refactorer createAccessorsInClass: cls ForVarNamed: var.
 		]. 
 	
-		
 
 	"Generate JSON mapping methods"
-	"self generateJSONMappingMethodsFor: cls withSchema: schemaDefinition."
-	self flag: 'see how to redo this methods'. 
+schemaDefinition at: #properties ifPresent: [:properties |
+		self refactorer createNeoJSONReaderFor: cls withShemaProperty: (properties).
+	].
+
 
 	^ cls
 ]
@@ -159,10 +164,10 @@ OpenAPIModelGenerator >> generateModelForSchema: schemaDefinition named: schemaN
 		actualSchema := self resolveReference: (schemaDefinition at: '$ref').
 	].
 	
-	className := self modelClassNameFor: schemaName.
+	className := self modelClassNameFor: schemaName. 
 	instanceVariables := self instanceVariablesForSchema: actualSchema.
 	
-	^ self generateModelClass: className withInstanceVariables: instanceVariables schema: actualSchema
+	^ self generateModelClass: className withInstanceVariables: instanceVariables schema: (actualSchema)
 ]
 
 { #category : 'private - utilities' }
@@ -192,7 +197,7 @@ OpenAPIModelGenerator >> instanceVariablesForSchema: schemaDefinition [
 { #category : 'private - utilities' }
 OpenAPIModelGenerator >> modelClassNameFor: schemaName [
 	"Generate a class name for the schema"
-	^ (self prefix, schemaName) asValidClassName
+	^ (self prefix, schemaName asPharoClassName) asValidClassName
 ]
 
 { #category : 'accessing' }

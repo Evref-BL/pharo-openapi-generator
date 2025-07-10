@@ -15,6 +15,80 @@ UtilsGenerator class >> newWithPrefix: aPrefixAsString forPackage: aPackageNameA
 	^ self new prefix: aPrefixAsString; packageName: aPackageNameAsSymbolOrString; yourself. 
 ]
 
+{ #category : 'as yet unclassified' }
+UtilsGenerator >> OLDcreateNeoJSONReaderFor: aClass withShemaProperty: properties [
+
+	| attributs sourceCode objAttributs arrayOfObjAttributs |
+	sourceCode := 'configureNeoJSONReader: aNeoJSONReader
+	
+	"reader behavier with arrays"
+	{3}
+	
+	"configures reader for object attributs"
+	aNeoJSONReader for: self do: [ :mapping |
+		mapping mapInstVars: {1}. 
+		
+		"all custom reader"
+		{2}
+		 ].
+	^ aNeoJSONReader. 
+	'.
+
+	objAttributs := (properties keys select: [ :key |
+		                 (properties at: key) isTypeObject ])
+		                asOrderedCollection.
+
+
+	arrayOfObjAttributs := (properties keys select: [ :key |
+		                        (properties at: key) isTypeArrayOfObjects ])
+		                       asOrderedCollection.
+
+
+	"go throught the combined types"
+	properties keys
+		select: [ :key | (properties at: key) isCombinedType ]
+		thenDo: [ :key |
+			(properties at: key) valuesDo: [ :v |
+				v do: [ :schema |
+					schema isTypeObject ifTrue: [ objAttributs add: key ].
+					schema isTypeArray ifTrue: [ arrayOfObjAttributs add: key ] ] ] ].
+
+
+	attributs := properties keys copyWithoutAll:
+		             arrayOfObjAttributs , objAttributs.
+
+
+
+	sourceCode := sourceCode format: {
+			              attributs asArray.
+			              (String cr join: {
+					               (String cr join: (objAttributs collect: [ :attr |
+							                 '(mapping mapInstVar: #' , attr
+							                 , ') valueSchema: ' ,  prefix
+							                 , attr asPharoClassName , '.' ])).
+					               (String cr join:
+						                (arrayOfObjAttributs collect: [ :attr |
+							                 '(mapping mapInstVar: #' , attr
+							                 , ') valueSchema: #ArraysOf' ,  prefix
+							                 , attr asPharoClassName , '.' ])) }).
+			              (String cr join:
+				               (arrayOfObjAttributs collect: [ :attr |
+					                'aNeoJSONReader
+					for: #ArraysOf{1}
+					customDo: [ :mapping | mapping listOfElementSchema: {1} ].'
+						                format:
+						                { ( prefix , attr asPharoClassName) } ])) }.
+
+
+	self
+		addMethodWithCode: sourceCode
+		toClass: aClass class
+		withProtocol: #neoJSONReader.
+
+
+	^ aClass
+]
+
 { #category : 'adding' }
 UtilsGenerator >> addComment: aComment inMethod: aMethodName inClass: aClass [
 
@@ -115,9 +189,9 @@ UtilsGenerator >> createClassNamed: className fromApiSchemaDic: schema [
 		  withParentClass: nil.
 	newClass := (prefix, className) asClassInEnvironment: self class environment.
 	
-	self flag: 'move importer specific creation to new method logic'.
-"	self ensureNeoJSONReaderInitializerFor: newClass.
-	self ensureImporterFromJsonFor: newClass. "
+
+	self ensureNeoJSONReaderInitializerFor: newClass.
+	self ensureImporterFromJsonFor: newClass. 
 	
 	
 	^ newClass 
@@ -180,15 +254,15 @@ UtilsGenerator >> createNeoJSONReaderFor: aClass withShemaProperty: properties [
 	sourceCode := 'configureNeoJSONReader: aNeoJSONReader
 	
 	"reader behavier with arrays"
-	{3}
+{3}
 	
 	"configures reader for object attributs"
 	aNeoJSONReader for: self do: [ :mapping |
-		mapping mapInstVars: {1}. 
+{1} 
 		
-		"all custom reader"
-		{2}
-		 ].
+	"all custom reader"
+{2}
+].
 	^ aNeoJSONReader. 
 	'.
 
@@ -207,9 +281,13 @@ UtilsGenerator >> createNeoJSONReaderFor: aClass withShemaProperty: properties [
 		select: [ :key | (properties at: key) isCombinedType ]
 		thenDo: [ :key |
 			(properties at: key) valuesDo: [ :v |
-				v do: [ :schema |
+				v isArray ifTrue: [
+					
+					v do: [ :schema |
 					schema isTypeObject ifTrue: [ objAttributs add: key ].
-					schema isTypeArray ifTrue: [ arrayOfObjAttributs add: key ] ] ] ].
+					schema isTypeArray ifTrue: [ arrayOfObjAttributs add: key ] ]
+					 ]
+				 ] ].
 
 
 	attributs := properties keys copyWithoutAll:
@@ -218,8 +296,12 @@ UtilsGenerator >> createNeoJSONReaderFor: aClass withShemaProperty: properties [
 
 
 	sourceCode := sourceCode format: {
-			              attributs asArray.
-			              (String cr join: {
+			     				"mapping mapInstVar"         
+								String cr join: (attributs collect: [:attr |
+									'mapping mapInstVar: #{1} to: #{2}.' format: { attr asValidVariableName . attr}.
+									]).
+			       			"mapping objet type to instVar"       
+								(String cr join: {
 					               (String cr join: (objAttributs collect: [ :attr |
 							                 '(mapping mapInstVar: #' , attr
 							                 , ') valueSchema: ' ,  prefix
@@ -251,9 +333,9 @@ UtilsGenerator >> createNeoJSONReaderFor: aClass withShemaProperty: properties [
 UtilsGenerator >> createNewClass: aClassName inPackage: aPackageName [ 
 
 	| transformation className |
-	className := prefix , aClassName asPharoClassName.
 
-	self class environment at: className asSymbol ifAbsent: [
+ 	className := aClassName asValidClassName asSymbol. 
+	self class environment at: className ifAbsent: [
 		transformation := (RBInsertNewClassTransformation className:
 				                   className)
 			                  superclass: #Object;
