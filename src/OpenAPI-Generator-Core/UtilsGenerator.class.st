@@ -298,18 +298,18 @@ UtilsGenerator >> createNeoJSONReaderFor: aClass withShemaProperty: properties [
 	sourceCode := sourceCode format: {
 			     				"mapping mapInstVar"         
 								String cr join: (attributs collect: [:attr |
-									'mapping mapInstVar: #{1} to: #{2}.' format: { attr asValidVariableName . attr}.
+									'mapping mapInstVar: #''{1}'' to: #''{2}''.' format: { attr asValidVariableName . attr}.
 									]).
 			       			"mapping objet type to instVar"       
 								(String cr join: {
 					               (String cr join: (objAttributs collect: [ :attr |
-							                 '(mapping mapInstVar: #' , attr
-							                 , ') valueSchema: ' ,  prefix
+							                 '(mapping mapInstVar: #''' , attr
+							                 , ''') valueSchema: ' ,  prefix
 							                 , attr asPharoClassName , '.' ])).
 					               (String cr join:
 						                (arrayOfObjAttributs collect: [ :attr |
-							                 '(mapping mapInstVar: #' , attr
-							                 , ') valueSchema: #ArraysOf' ,  prefix
+							                 '(mapping mapInstVar: #''' , attr
+							                 , ''') valueSchema: #ArraysOf' ,  prefix
 							                 , attr asPharoClassName , '.' ])) }).
 			              (String cr join:
 				               (arrayOfObjAttributs collect: [ :attr |

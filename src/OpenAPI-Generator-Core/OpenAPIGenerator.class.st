@@ -110,6 +110,25 @@ OpenAPIGenerator >> prefix: aString [
 	prefix := aString
 ]
 
+{ #category : 'navigating' }
+OpenAPIGenerator >> resolveReference: refString [
+	"Resolve a reference to its actual schema"
+
+	| parts path currentObject |
+	parts := refString splitOn: '/'.
+
+	"Skip the first part if it's '#'"
+	path := parts copyWithoutFirst.
+	path first = '' ifTrue: [ path := path copyWithoutFirst ].
+
+	"Navigate through the JSON structure to find the referenced object"
+	currentObject := self specification jsonSpec.
+	path do: [ :part |
+		currentObject := currentObject at: part ifAbsent: [ Dictionary new ] ].
+
+	^ currentObject
+]
+
 { #category : 'accessing' }
 OpenAPIGenerator >> specification [
 	^ specification

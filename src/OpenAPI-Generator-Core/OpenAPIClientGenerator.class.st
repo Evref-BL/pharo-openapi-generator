@@ -36,8 +36,14 @@ OpenAPIClientGenerator >> baseUrl: aString [
 
 { #category : 'parm' }
 OpenAPIClientGenerator >> constructParmSignatureFor: parm [
-	|identifier|
-	identifier := (parm at: #name).
+	|identifier resolved|
+	
+	resolved := parm.
+	(parm includesKey: #'$ref' )ifTrue: [ 
+			resolved := self resolveReference: (parm at: #'$ref').
+		 ].
+	
+	identifier := (resolved at: #name).
 
 	^ ('with ' , identifier) asValidVariableName , ': '
 	  , identifier asValidVariableName
@@ -108,32 +114,43 @@ OpenAPIClientGenerator >> generateEndpointMethodsInClass: apiClass [
 OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod operation: operation inClass: apiClass [
 	"Generate a method for a specific API endpoint"
 
-	| methodName methodSource parameters returnType queryParams parmSign |
+	| methodName methodSource parameters returnType queryParams parmSign requiredParmaters pathParams|
 	methodName := self
 		              methodNameForOperation: operation
 		              path: path
 		              httpMethod: httpMethod.
-	parameters := operation at: 'parameters' ifAbsent: [ #(  ) ].
+	
+	"get request parmeters"
+	parameters := (operation at: 'parameters' ifAbsent: [ #(  ) ]) collect: [ :dic |
+		(dic includesKey: #'$ref') ifTrue: [ self resolveReference: (dic at: #'$ref' )  ] ifFalse: [ dic ].
+		 ].
+	
+	pathParams :=  parameters select: [ :parm | (parm at: #in ifAbsent: [ false ]) = #path ] .
+	queryParams := parameters select: [ :parm | (parm at: #in ifAbsent: [ false ]) = #query ] .
+	
+	
 	returnType := self returnTypeForOperation: operation.
 
-	parmSign := parameters collect: [ :parm |
+	parmSign := pathParams collect: [ :parm |
 		            self constructParmSignatureFor: parm ].
+	
 	parmSign ifNotEmpty: [
 		parmSign at: 1 put: parmSign first capitalized ].
 
 	methodSource := String streamContents: [ :stream |
 		                | paramNames paramString |
-		                stream << methodName.
-		                parmSign do: [ :parm |
+		               
+	
+		 stream << methodName.
+		  parmSign do: [ :parm |
 			                stream
 				                << parm;
 				                << ' ' ].
-		                stream
-			                << '	"';
-			                cr.
+		  stream << 'withParams: parms'.
+		                stream cr.
 		                stream
 			                <<
-				                ('	'
+				                ('	"'
 				                 ,
 					                 (operation
 						                  at: 'summary'
@@ -143,7 +160,7 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 		                (operation includesKey: 'description') ifTrue: [
 			                stream
 				                nextPutAll: '	';
-				                nextPutAll: (operation at: 'description');
+				                nextPutAll: ((operation at: 'description') replaceAll: $" with: $')  ;
 				                cr ].
 
 		                stream
@@ -154,9 +171,12 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 			                nextPutAll: '	url := baseUrl, ''' , path , '''.';
 			                cr.
 
+"----------------------------------------------------------------------"
+
 		                "Path parameters"
-		                parameters do: [ :param |
+		                pathParams do: [ :param |
 			                | paramName |
+								
 			                paramName := (param at: 'name') asValidVariableName.
 			                (param at: 'in' ifAbsent: [ '' ]) = 'path' ifTrue: [
 				                stream
@@ -166,11 +186,11 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 						                , ' asString.';
 					                cr ] ].
 
-		                "Query parameters"
 
-		                queryParams := parameters select: [ :param |
-			                               (param at: 'in' ifAbsent: [ '' ])
-			                               = 'query' ].
+
+"----------------------------------------------------------------------"
+
+		                "Query parameters"
 
 		                queryParams ifNotEmpty: [
 			                stream
@@ -178,24 +198,19 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 				                cr.
 			                queryParams doWithIndex: [ :param :index |
 				                | paramName |
-				                paramName := (param at: 'name')
-					                             asValidVariableName.
-				                stream
-					                nextPutAll: '	' , paramName , ' ifNotNil: [';
-					                cr.
-				                stream
-					                nextPutAll:
-						                '		url := url, ''' , (param at: 'name')
-						                , '='', ' , paramName , ' asString.';
-					                cr.
-				                index < queryParams size ifTrue: [
+				
+									stream << ('parms at: #''{1}'' ifPresent: [:p |
+url := url , ''{2}='' , p asString.
+url := url , ''&'' ] ifAbsent: [''''].' format: { (param at: 'name')
+					                             asValidVariableName . (param at: 'name')}); cr.
+									
+				                (index < queryParams size) ifTrue: [
 					                stream
 						                nextPutAll: '		url := url, ''&''.';
 						                cr ].
-				                stream
-					                nextPutAll: '	].';
-					                cr ] ].
+				                stream cr ] ].
 
+"----------------------------------------------------------------------"
 		                "HTTP request"
 		                stream
 			                nextPutAll: '	httpClient';
@@ -295,6 +310,25 @@ OpenAPIClientGenerator >> refactorer [
 		                UtilsGenerator
 			                newWithPrefix: prefix
 			                forPackage: packageName ]
+]
+
+{ #category : 'navigating' }
+OpenAPIClientGenerator >> resolveReference: refString [
+	"Resolve a reference to its actual schema"
+
+	| parts path currentObject |
+	parts := refString splitOn: '/'.
+
+	"Skip the first part if it's '#'"
+	path := parts copyWithoutFirst.
+	path first = '' ifTrue: [ path := path copyWithoutFirst ].
+
+	"Navigate through the JSON structure to find the referenced object"
+	currentObject := self specification jsonSpec.
+	path do: [ :part |
+		currentObject := currentObject at: part ifAbsent: [ Dictionary new ] ].
+
+	^ currentObject
 ]
 
 { #category : 'private - utilities' }
