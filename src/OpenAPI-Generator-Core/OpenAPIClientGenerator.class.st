@@ -34,6 +34,15 @@ OpenAPIClientGenerator >> baseUrl: aString [
 	baseUrl := aString
 ]
 
+{ #category : 'parm' }
+OpenAPIClientGenerator >> constructParmSignatureFor: parm [
+	|identifier|
+	identifier := (parm at: #name).
+
+	^ ('with ' , identifier) asValidVariableName , ': '
+	  , identifier asValidVariableName
+]
+
 { #category : 'generation' }
 OpenAPIClientGenerator >> generate [
 	"Generate API client classes from the OpenAPI specification"
@@ -98,92 +107,145 @@ OpenAPIClientGenerator >> generateEndpointMethodsInClass: apiClass [
 { #category : 'private - generation' }
 OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod operation: operation inClass: apiClass [
 	"Generate a method for a specific API endpoint"
-	| methodName methodSource parameters returnType 	 queryParams |
-	
-	methodName := self methodNameForOperation: operation path: path httpMethod: httpMethod.
-	parameters := operation at: 'parameters' ifAbsent: [ #() ].
-	returnType := self returnTypeForOperation: operation.
-	
-	methodSource := String streamContents: [ :stream |
-		| paramNames paramString |
-		
-		"Method signature"
-		paramNames := parameters collect: [ :param | (param at: 'name') asValidVariableName ].
-		paramString := paramNames ifEmpty: [ '' ] ifNotEmpty: [ ' ' , (paramNames joinUsing: ' ') ].
-		
-		stream 
-			nextPutAll: methodName;
-			nextPutAll: paramString; cr;
-			nextPutAll: '	"'; cr;
-			nextPutAll: '	', (operation at: 'summary' ifAbsent: [ methodName ]); cr.
-			
-		(operation includesKey: 'description') ifTrue: [ 
-			stream nextPutAll: '	'; nextPutAll: (operation at: 'description'); cr.
-		].
-		
-		stream nextPutAll: '	"'; cr;
-			nextPutAll: '	| url response |'; cr;
-			nextPutAll: '	url := baseUrl, ''', path, '''.'; cr.
-			
-		"Path parameters"
-		parameters do: [ :param |
-			| paramName |
-			paramName := (param at: 'name') asValidVariableName.
-			(param at: 'in' ifAbsent: ['']) = 'path' ifTrue: [
-				stream nextPutAll: '	url := url copyReplaceAll: ''{',(param at: 'name'),'}'' with: ', paramName, ' asString.'; cr.
-			].
-		].
-		
-		"Query parameters"
-	
-		queryParams := parameters select: [ :param | (param at: 'in' ifAbsent: ['']) = 'query' ].
-		
-		queryParams ifNotEmpty: [
-			stream nextPutAll: '	url := url, ''?''.'; cr.
-			queryParams doWithIndex: [ :param :index |
-				| paramName |
-				paramName := (param at: 'name') asValidVariableName.
-				stream nextPutAll: '	', paramName, ' ifNotNil: ['; cr.
-				stream nextPutAll: '		url := url, ''', (param at: 'name'), '='', ', paramName, ' asString.'; cr.
-				index < queryParams size ifTrue: [
-					stream nextPutAll: '		url := url, ''&''.'; cr.
-				].
-				stream nextPutAll: '	].'; cr.
-			].
-		].
-		
-		"HTTP request"
-		stream 
-			nextPutAll: '	httpClient'; cr;
-			nextPutAll: '		url: url;'; cr;
-			nextPutAll: '		method: #', httpMethod asUppercase, ';'; cr.
-			
-		"Request body"
-		(operation includesKey: 'requestBody') ifTrue: [
-			stream 
-				nextPutAll: '		entity: (ZnEntity json: requestBody asJSON);'; cr;
-				nextPutAll: '		contentType: ZnMimeType applicationJson;'; cr.
-		].
-		
-		stream 
-			nextPutAll: '		enforceHttpSuccess: true.'; cr;
-			nextPutAll: '	response := httpClient execute.'; cr;
-			nextPutAll: '	^ response isSuccess'; cr;
-			nextPutAll: '		ifTrue: ['; cr.
-			
-		"Handle response"
-		returnType 
-			ifNil: [ stream nextPutAll: '			response contents' ]
-			ifNotNil: [ stream nextPutAll: '			', returnType, ' new fromJSON: (NeoJSONReader fromString: response contents)' ].
-			
-		stream 
-			nextPutAll: ''; cr;
-			nextPutAll: '		]'; cr;
-			nextPutAll: '		ifFalse: [ self error: response statusLine reason ]'.
-	].
-	
-	self refactorer addMethodWithCode: methodSource toClass: apiClass withProtocol: #api
 
+	| methodName methodSource parameters returnType queryParams parmSign |
+	methodName := self
+		              methodNameForOperation: operation
+		              path: path
+		              httpMethod: httpMethod.
+	parameters := operation at: 'parameters' ifAbsent: [ #(  ) ].
+	returnType := self returnTypeForOperation: operation.
+
+	parmSign := parameters collect: [ :parm |
+		            self constructParmSignatureFor: parm ].
+	parmSign ifNotEmpty: [
+		parmSign at: 1 put: parmSign first capitalized ].
+
+	methodSource := String streamContents: [ :stream |
+		                | paramNames paramString |
+		                stream << methodName.
+		                parmSign do: [ :parm |
+			                stream
+				                << parm;
+				                << ' ' ].
+		                stream
+			                << '	"';
+			                cr.
+		                stream
+			                <<
+				                ('	'
+				                 ,
+					                 (operation
+						                  at: 'summary'
+						                  ifAbsent: [ methodName ]));
+			                cr.
+
+		                (operation includesKey: 'description') ifTrue: [
+			                stream
+				                nextPutAll: '	';
+				                nextPutAll: (operation at: 'description');
+				                cr ].
+
+		                stream
+			                nextPutAll: '	"';
+			                cr;
+			                nextPutAll: '	| url response |';
+			                cr;
+			                nextPutAll: '	url := baseUrl, ''' , path , '''.';
+			                cr.
+
+		                "Path parameters"
+		                parameters do: [ :param |
+			                | paramName |
+			                paramName := (param at: 'name') asValidVariableName.
+			                (param at: 'in' ifAbsent: [ '' ]) = 'path' ifTrue: [
+				                stream
+					                nextPutAll:
+						                '	url := url copyReplaceAll: ''{'
+						                , (param at: 'name') , '}'' with: ' , paramName
+						                , ' asString.';
+					                cr ] ].
+
+		                "Query parameters"
+
+		                queryParams := parameters select: [ :param |
+			                               (param at: 'in' ifAbsent: [ '' ])
+			                               = 'query' ].
+
+		                queryParams ifNotEmpty: [
+			                stream
+				                nextPutAll: '	url := url, ''?''.';
+				                cr.
+			                queryParams doWithIndex: [ :param :index |
+				                | paramName |
+				                paramName := (param at: 'name')
+					                             asValidVariableName.
+				                stream
+					                nextPutAll: '	' , paramName , ' ifNotNil: [';
+					                cr.
+				                stream
+					                nextPutAll:
+						                '		url := url, ''' , (param at: 'name')
+						                , '='', ' , paramName , ' asString.';
+					                cr.
+				                index < queryParams size ifTrue: [
+					                stream
+						                nextPutAll: '		url := url, ''&''.';
+						                cr ].
+				                stream
+					                nextPutAll: '	].';
+					                cr ] ].
+
+		                "HTTP request"
+		                stream
+			                nextPutAll: '	httpClient';
+			                cr;
+			                nextPutAll: '		url: url;';
+			                cr;
+			                nextPutAll:
+				                '		method: #' , httpMethod asUppercase , ';';
+			                cr.
+
+		                "Request body"
+		                (operation includesKey: 'requestBody') ifTrue: [
+			                stream
+				                nextPutAll:
+					                '		entity: (ZnEntity json: requestBody asJSON);';
+				                cr;
+				                nextPutAll:
+					                '		contentType: ZnMimeType applicationJson;';
+				                cr ].
+
+		                stream
+			                nextPutAll: '		enforceHttpSuccess: true.';
+			                cr;
+			                nextPutAll: '	response := httpClient execute.';
+			                cr;
+			                nextPutAll: '	^ response isSuccess';
+			                cr;
+			                nextPutAll: '		ifTrue: [';
+			                cr.
+
+		                "Handle response"
+		                returnType
+			                ifNil: [ stream nextPutAll: '			response contents' ]
+			                ifNotNil: [
+				                stream nextPutAll: '			' , returnType
+					                ,
+					                ' new fromJSON: (NeoJSONReader fromString: response contents)' ].
+
+		                stream
+			                nextPutAll: '';
+			                cr;
+			                nextPutAll: '		]';
+			                cr;
+			                nextPutAll:
+				                '		ifFalse: [ self error: response statusLine reason ]' ].
+
+	self refactorer
+		addMethodWithCode: methodSource
+		toClass: apiClass
+		withProtocol: #api
 ]
 
 { #category : 'private - utilities' }
