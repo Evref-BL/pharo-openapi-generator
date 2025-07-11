@@ -21,20 +21,31 @@ OpenAPIModelGenerator class >> forSpecification: anOpenAPISpecification [
 { #category : 'generation' }
 OpenAPIModelGenerator >> generate [
 	"Generate model classes from the OpenAPI specification"
+
 	| schemas generatedClasses |
-	
 	generatedClasses := OrderedCollection new.
-	schemas := self specification components at: 'schemas' ifAbsent: [ Dictionary new ].
+	schemas := self specification components
+		           at: 'schemas'
+		           ifAbsent: [ Dictionary new ].
 	schemas keysAndValuesDo: [ :schemaName :schemaDefinition |
 		| cls |
-
+		
 		schemaDefinition isTypeObject ifTrue: [
-			 		cls := self generateModelForSchema: schemaDefinition named: schemaName. 
-					generatedClasses add: cls. ].
+			cls := self
+				       generateModelForSchema: schemaDefinition
+				       named: schemaName.
+			generatedClasses add: cls ].
+		schemaDefinition isTypeArray ifTrue: [ 
+				cls := self
+				       generateModelForSchema: (schemaDefinition at: #items)
+				       named: schemaName.
+			generatedClasses add: cls
+			
+			
+			].
+		
+		 ].
 
-
-	].
-	
 	^ generatedClasses
 ]
 

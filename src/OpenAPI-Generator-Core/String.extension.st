@@ -1,6 +1,19 @@
 Extension { #name : 'String' }
 
 { #category : '*OpenAPI-Generator-Core' }
+String >> asNormalizedIdentifier [
+
+	| newString |
+	newString := self collect: [ :c |
+		             (c isLetter or: [ c isDigit ])
+			             ifTrue: [ c asCharacter ]
+			             ifFalse: [ Character space ] ].
+	newString first isDigit ifTrue: [ newString := 'T' , newString ].
+
+	^ newString asCamelCase
+]
+
+{ #category : '*OpenAPI-Generator-Core' }
 String >> asPharoClassName [ 
 
 	| newString |

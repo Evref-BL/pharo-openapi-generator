@@ -114,39 +114,49 @@ OpenAPIClientGenerator >> generateEndpointMethodsInClass: apiClass [
 OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod operation: operation inClass: apiClass [
 	"Generate a method for a specific API endpoint"
 
-	| methodName methodSource parameters returnType queryParams parmSign requiredParmaters pathParams|
+	| methodName methodSource parameters returnType queryParams parmSign requiredParmaters pathParams |
 	methodName := self
 		              methodNameForOperation: operation
 		              path: path
 		              httpMethod: httpMethod.
-	
+
 	"get request parmeters"
-	parameters := (operation at: 'parameters' ifAbsent: [ #(  ) ]) collect: [ :dic |
-		(dic includesKey: #'$ref') ifTrue: [ self resolveReference: (dic at: #'$ref' )  ] ifFalse: [ dic ].
-		 ].
-	
-	pathParams :=  parameters select: [ :parm | (parm at: #in ifAbsent: [ false ]) = #path ] .
-	queryParams := parameters select: [ :parm | (parm at: #in ifAbsent: [ false ]) = #query ] .
-	
-	
+	parameters := (operation at: 'parameters' ifAbsent: [ #(  ) ])
+		              collect: [ :dic |
+			              (dic includesKey: #'$ref')
+				              ifTrue: [ self resolveReference: (dic at: #'$ref') ]
+				              ifFalse: [ dic ] ].
+
+
+	requiredParmaters := parameters select: [ :parm |
+		                     (parm at: #required ifAbsent: [ false ])
+		                     = #true ].
+	pathParams := parameters select: [ :parm |
+		              (parm at: #in ifAbsent: [ false ]) = #path ].
+	queryParams := parameters select: [ :parm |
+		               (parm at: #in ifAbsent: [ false ]) = #query ].
+
+
 	returnType := self returnTypeForOperation: operation.
 
-	parmSign := pathParams collect: [ :parm |
-		            self constructParmSignatureFor: parm ].
-	
+	parmSign := (pathParams , requiredParmaters collect: [ :parm |
+		             self constructParmSignatureFor: parm ]) asSet
+		            asOrderedCollection.
+	(operation includesKey: 'requestBody') ifTrue: [
+		parmSign add: 'andRequestBody: requestBody' ].
+
 	parmSign ifNotEmpty: [
 		parmSign at: 1 put: parmSign first capitalized ].
 
+
 	methodSource := String streamContents: [ :stream |
-		                | paramNames paramString |
-		               
-	
-		 stream << methodName.
-		  parmSign do: [ :parm |
+
+		                stream << methodName.
+		                parmSign do: [ :parm |
 			                stream
 				                << parm;
 				                << ' ' ].
-		  stream << 'withParams: parms'.
+		                stream << 'withParams: parms'.
 		                stream cr.
 		                stream
 			                <<
@@ -159,24 +169,26 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 
 		                (operation includesKey: 'description') ifTrue: [
 			                stream
-				                nextPutAll: '	';
-				                nextPutAll: ((operation at: 'description') replaceAll: $" with: $')  ;
+				                << '	';
+				                <<
+					                ((operation at: 'description')
+						                 replaceAll: $"
+						                 with: $');
 				                cr ].
 
 		                stream
-			                nextPutAll: '	"';
+			                << '	"';
 			                cr;
-			                nextPutAll: '	| url response |';
+			                << '	| url response |';
 			                cr;
-			                nextPutAll: '	url := baseUrl, ''' , path , '''.';
+			                << ('	url := baseUrl, ''' , path , '''.');
 			                cr.
 
-"----------------------------------------------------------------------"
+		                "----------------------------------------------------------------------"
 
 		                "Path parameters"
 		                pathParams do: [ :param |
 			                | paramName |
-								
 			                paramName := (param at: 'name') asValidVariableName.
 			                (param at: 'in' ifAbsent: [ '' ]) = 'path' ifTrue: [
 				                stream
@@ -188,7 +200,7 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 
 
 
-"----------------------------------------------------------------------"
+		                "----------------------------------------------------------------------"
 
 		                "Query parameters"
 
@@ -198,19 +210,21 @@ OpenAPIClientGenerator >> generateMethodForPath: path httpMethod: httpMethod ope
 				                cr.
 			                queryParams doWithIndex: [ :param :index |
 				                | paramName |
-				
-									stream << ('parms at: #''{1}'' ifPresent: [:p |
+				                stream
+					                << ('parms at: #''{1}'' ifPresent: [:p |
 url := url , ''{2}='' , p asString.
-url := url , ''&'' ] ifAbsent: [''''].' format: { (param at: 'name')
-					                             asValidVariableName . (param at: 'name')}); cr.
-									
-				                (index < queryParams size) ifTrue: [
+url := url , ''&'' ] ifAbsent: [''''].' format: {
+									                 (param at: 'name') asValidVariableName.
+									                 (param at: 'name') });
+					                cr.
+
+				                index < queryParams size ifTrue: [
 					                stream
 						                nextPutAll: '		url := url, ''&''.';
 						                cr ].
 				                stream cr ] ].
 
-"----------------------------------------------------------------------"
+		                "----------------------------------------------------------------------"
 		                "HTTP request"
 		                stream
 			                nextPutAll: '	httpClient';
@@ -245,6 +259,7 @@ url := url , ''&'' ] ifAbsent: [''''].' format: { (param at: 'name')
 		                returnType
 			                ifNil: [ stream nextPutAll: '			response contents' ]
 			                ifNotNil: [
+									
 				                stream nextPutAll: '			' , returnType
 					                ,
 					                ' new fromJSON: (NeoJSONReader fromString: response contents)' ].
@@ -256,6 +271,7 @@ url := url , ''&'' ] ifAbsent: [''''].' format: { (param at: 'name')
 			                cr;
 			                nextPutAll:
 				                '		ifFalse: [ self error: response statusLine reason ]' ].
+
 
 	self refactorer
 		addMethodWithCode: methodSource
@@ -270,18 +286,19 @@ OpenAPIClientGenerator >> methodNameForOperation: operation path: path httpMetho
 	| name |
 	"Use operationId if available"
 	(operation includesKey: 'operationId') ifTrue: [
-		^ (operation at: 'operationId') asValidMethodName ].
+		name := (operation at: 'operationId') ]
+	ifFalse: [
+		name := (httpMethod, path).
+		].
 
-	"Otherwise generate from path and HTTP method"
-	name := httpMethod , (path
-		         copyReplaceAll: '/'
-		         with: '_';
-		         copyReplaceAll: '{'
-		         with: '';
-		         copyReplaceAll: '}'
-		         with: '').
+	^ name asNormalizedIdentifier
+]
 
-	^ name asValidMethodName
+{ #category : 'private - utilities' }
+OpenAPIClientGenerator >> modelClassNameFor: schemaName [
+	"Generate a class name for the schema"
+
+	^ (self prefix , schemaName asPharoClassName) asValidClassName
 ]
 
 { #category : 'accessing' }
@@ -368,7 +385,9 @@ OpenAPIClientGenerator >> specification: anOpenAPISpecification [
 { #category : 'private - utilities' }
 OpenAPIClientGenerator >> typeFromRef: refString [
 	"Extract type name from a $ref string"
+
 	| parts |
 	parts := refString splitOn: '/'.
-	^ (self prefix, parts last) asValidClassName
+	"	^ (self prefix , parts last asPharoClassName) asValidClassName."
+	^ self modelClassNameFor: parts last
 ]
